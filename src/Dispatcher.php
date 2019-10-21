@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Chiron\Router;
+namespace Chiron\Router\FastRoute;
 
 use FastRoute\Dispatcher\GroupCountBased as GroupCountBasedDispatcher;
 use Psr\Http\Message\ServerRequestInterface;

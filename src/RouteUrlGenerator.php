@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Chiron\Router;
+namespace Chiron\Router\FastRoute;
 
 use FastRoute\RouteParser\Std;
 use InvalidArgumentException;

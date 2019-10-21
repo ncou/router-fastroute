@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace Chiron\Router;
+namespace Chiron\Router\FastRoute;
 
 use Chiron\Router\Traits\MiddlewareAwareInterface;
 use Chiron\Router\Traits\MiddlewareAwareTrait;

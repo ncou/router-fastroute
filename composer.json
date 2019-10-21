@@ -28,12 +28,12 @@
     },
     "autoload": {
         "psr-4": {
-            "Chiron\\Router\\": "src"
+            "Chiron\\Router\\FastRoute\\": "src"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "Chiron\\Router\\": "tests"
+            "Chiron\\Router\\FastRoute\\": "tests"
         }
     },
     "scripts": {
