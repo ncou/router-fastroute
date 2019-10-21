@@ -9,6 +9,15 @@ use Chiron\Router\Traits\MiddlewareAwareTrait;
 use Chiron\Router\Traits\RouteCollectionInterface;
 use Chiron\Router\Traits\RouteCollectionTrait;
 use Chiron\Pipe\PipelineBuilder;
+use Chiron\Router\RouterInterface;
+use Chiron\Router\Route;
+use Chiron\Router\Method;
+use Chiron\Router\RouteCollector;
+use Chiron\Router\RequestHandler;
+use Chiron\Router\RouteCollectorInterface;
+use Chiron\Router\RouteGroup;
+use Chiron\Router\RouteResult;
+use Chiron\Router\RouteRunner;
 use FastRoute\DataGenerator;
 use FastRoute\RouteParser;
 use InvalidArgumentException;
@@ -40,7 +49,7 @@ use RuntimeException;
  * attaching via one of the exposed methods, and will raise an exception when a
  * collision occurs.
  */
-class Router implements RouterInterface
+class FastRoute implements RouterInterface
 {
     use MiddlewareAwareTrait;
 

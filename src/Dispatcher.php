@@ -6,6 +6,7 @@ namespace Chiron\Router\FastRoute;
 
 use FastRoute\Dispatcher\GroupCountBased as GroupCountBasedDispatcher;
 use Psr\Http\Message\ServerRequestInterface;
+use Chiron\Router\RouteResult;
 
 class Dispatcher extends GroupCountBasedDispatcher
 {
