@@ -204,6 +204,7 @@ class FastRoute implements RouterInterface
 
         // process routes
         //$dispatcher = new Dispatcher($this->routeCollector->getRoutes(), $this->generator->getData());
+        // TODO : on doit aussi pouvoir récupérer le ->getData() depuis la classe RouteCollector de FastRoute
         $dispatcher = new Dispatcher($this->generator->getData());
 
         return $dispatcher->dispatchRequest($request);
