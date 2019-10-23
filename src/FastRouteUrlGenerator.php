@@ -54,6 +54,7 @@ class FastRouteUrlGenerator
     //https://github.com/illuminate/routing/blob/master/RouteUrlGenerator.php#L77
     public static function generate(string $routePath, array $substitutions = [], array $queryParams = []): string
     {
+        // TODO : attention il faut lui passer la route en paramétre de la fonction generate() car on doit aussi utiliser les paramétres par défaut pour générer l'URI => https://github.com/yiisoft/router-fastroute/blob/master/src/FastRoute.php#L231
         $parser = new Std();
         $routeDatas = $parser->parse($routePath);
 
