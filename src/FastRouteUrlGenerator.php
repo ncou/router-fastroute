@@ -10,7 +10,7 @@ use InvalidArgumentException;
 //https://github.com/symfony/routing/blob/master/Generator/UrlGenerator.php
 //https://github.com/illuminate/routing/blob/master/RouteUrlGenerator.php
 
-class RouteUrlGenerator
+class FastRouteUrlGenerator
 {
     /**
      * Characters that should not be URL encoded.

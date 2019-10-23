@@ -20,6 +20,8 @@ use Chiron\Router\RouteResult;
 use Chiron\Router\RouteRunner;
 use FastRoute\DataGenerator;
 use FastRoute\RouteParser;
+use FastRoute\Dispatcher as DispatcherInterface;
+use FastRoute\Dispatcher\GroupCountBased as GroupCountBasedDispatcher;
 use InvalidArgumentException;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -178,36 +180,53 @@ class FastRoute implements RouterInterface
         $this->routeCollector = $collector;
     }
 
-
-    /**
-     * {@inheritdoc}
-     */
-    /*
-    public function dispatch_OLD(ServerRequestInterface $request) : ResponseInterface
-    {
-        if (is_null($this->getStrategy())) {
-            $this->setStrategy(new HtmlStrategy);
-        }
-
-        $this->prepareRoutes($request);
-
-        return (new Dispatcher($this->getData()))
-            ->middlewares($this->getMiddlewareStack())
-            ->setStrategy($this->getStrategy())
-            ->dispatchRequest($request)
-        ;
-    }*/
-
     public function match(ServerRequestInterface $request): RouteResult
     {
+        // prepare routes
         $this->injectRoutes($request);
 
         // process routes
-        //$dispatcher = new Dispatcher($this->routeCollector->getRoutes(), $this->generator->getData());
-        // TODO : on doit aussi pouvoir récupérer le ->getData() depuis la classe RouteCollector de FastRoute
-        $dispatcher = new Dispatcher($this->generator->getData());
+        $dispatcher = $this->getDispatcher();
 
-        return $dispatcher->dispatchRequest($request);
+        $httpMethod = $request->getMethod();
+        $uri = rawurldecode($request->getUri()->getPath()); //$uri = '/' . ltrim($request->getUri()->getPath(), '/');
+
+        $result = $dispatcher->dispatch($httpMethod, $uri);
+
+        return $result[0] !== DispatcherInterface::FOUND
+            ? $this->marshalFailedRoute($result)
+            : $this->marshalMatchedRoute($result);
+    }
+
+    private function getDispatcher(): DispatcherInterface
+    {
+        return new GroupCountBasedDispatcher($this->generator->getData());
+    }
+
+    /**
+     * Marshal a routing failure result.
+     *
+     * If the failure was due to the HTTP method, passes the allowed HTTP
+     * methods to the factory.
+     */
+    private function marshalFailedRoute(array $result): RouteResult
+    {
+        if ($result[0] === DispatcherInterface::METHOD_NOT_ALLOWED) {
+            return RouteResult::fromRouteFailure($result[1]);
+        }
+
+        return RouteResult::fromRouteFailure(RouteResult::HTTP_METHOD_ANY);
+    }
+
+    /**
+     * Marshals a route result based on the results of matching and the current HTTP method.
+     */
+    private function marshalMatchedRoute(array $result): RouteResult
+    {
+        $route = $result[1];
+        $params = $result[2];
+
+        return RouteResult::fromRoute($route, $params);
     }
 
     /**
@@ -334,66 +353,13 @@ class FastRoute implements RouterInterface
     {
         $route = $this->routeCollector->getNamedRoute($routeName);
 
-        return RouteUrlGenerator::generate($route->getPath(), $substitutions, $queryParams);
+        return FastRouteUrlGenerator::generate($route->getPath(), $substitutions, $queryParams);
     }
 
     public function handle(ServerRequestInterface $request) : ResponseInterface
     {
-        //$builder = new PipelineBuilder($this);
         $handler = new RequestHandler($this->getMiddlewareStack(), new RouteRunner($this));
 
         return $handler->handle($request);
     }
-
-    /*
-     * {@inheritdoc}
-     */
-    /*
-    public function lookupRoute(string $identifier): Route
-    {
-        if (!isset($this->routes[$identifier])) {
-            throw new InvalidArgumentException('Route not found for identifier: ' . $identifier);
-        }
-        return $this->routes[$identifier];
-    }*/
-
-    /*
-     * Determine if the route is duplicated in the current list.
-     *
-     * Checks if a route with the same name or path exists already in the list;
-     * if so, and it responds to any of the $methods indicated, raises
-     * a DuplicateRouteException indicating a duplicate route.
-     *
-     * @throws Exception\DuplicateRouteException on duplicate route detection.
-     */
-    //https://github.com/zendframework/zend-expressive-router/blob/master/src/RouteCollector.php#L149
-    /*
-    private function checkForDuplicateRoute(string $path, array $methods = null) : void
-    {
-        if (null === $methods) {
-            $methods = Route::HTTP_METHOD_ANY;
-        }
-        $matches = array_filter($this->routes, function (Route $route) use ($path, $methods) {
-            if ($path !== $route->getPath()) {
-                return false;
-            }
-            if ($methods === Route::HTTP_METHOD_ANY) {
-                return true;
-            }
-            return array_reduce($methods, function ($carry, $method) use ($route) {
-                return ($carry || $route->allowsMethod($method));
-            }, false);
-        });
-        if (! empty($matches)) {
-            $match = reset($matches);
-            $allowedMethods = $match->getAllowedMethods() ?: ['(any)'];
-            $name = $match->getName();
-            throw new Exception\DuplicateRouteException(sprintf(
-                'Duplicate route detected; path "%s" answering to methods [%s]%s',
-                $match->getPath(),
-                implode(',', $allowedMethods),
-                $name ? sprintf(', with name "%s"', $name) : ''
-            ));
-        }
-    }*/
 }
