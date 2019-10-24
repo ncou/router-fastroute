@@ -12,16 +12,15 @@ use Chiron\Pipe\PipelineBuilder;
 use Chiron\Router\RouterInterface;
 use Chiron\Router\Route;
 use Chiron\Router\Method;
-use Chiron\Router\RouteCollector;
 use Chiron\Router\RequestHandler;
 use Chiron\Router\RouteCollectorInterface;
 use Chiron\Router\RouteGroup;
 use Chiron\Router\RouteResult;
 use Chiron\Router\RouteRunner;
-use FastRoute\DataGenerator;
-use FastRoute\RouteParser;
+use FastRoute\DataGenerator\GroupCountBased as RouteGenerator;
+use FastRoute\RouteParser\Std as RouteParser;
 use FastRoute\Dispatcher as DispatcherInterface;
-use FastRoute\Dispatcher\GroupCountBased as GroupCountBasedDispatcher;
+use FastRoute\Dispatcher\GroupCountBased as RouteDispatcher;
 use InvalidArgumentException;
 use Psr\Http\Message\ResponseInterface;
 use Psr\Http\Message\ServerRequestInterface;
@@ -61,7 +60,10 @@ class FastRoute implements RouterInterface
     /** @var FastRoute\DataGenerator */
     private $generator;
 
-    private $routeCollector;
+    /**
+     * @var \Chiron\Router\Route[]
+     */
+    private $routes = [];
 
     /**
      * @var array
@@ -117,13 +119,11 @@ class FastRoute implements RouterInterface
      */
     // TODO : créer un constructeur qui prendra en paramétre un routeCollector, ca évitera de faire un appel à setRouteCollector() !!!!
     // TODO : virer le DataGenerator qui est en paramétre et faire un new directement dans le constructeur.
-    public function __construct(DataGenerator $generator = null)
+    public function __construct()
     {
-        $this->parser = new RouteParser\Std();
+        $this->parser = new RouteParser();
         // build parent route collector
-        $this->generator = ($generator) ?? new DataGenerator\GroupCountBased();
-
-        $this->routeCollector = new RouteCollector();
+        $this->generator = new RouteGenerator();
 
         // TODO utiliser ce bout de code et faire un tableau de pattern dans la classe de ce type ['slug' => 'xxxx', 'number' => 'yyyy']
 /*
@@ -170,14 +170,100 @@ class FastRoute implements RouterInterface
         return $this->basePath;
     }
 
-    public function getRouteCollector(): RouteCollectorInterface
+    /**
+     * Add a route to the collection.
+     *
+     * @param Route $route
+     */
+    public function addRoute(Route $route): void
     {
-        return $this->routeCollector;
+        $this->routes[] = $route;
     }
 
-    public function setRouteCollector(RouteCollectorInterface $collector): void
+    /**
+     * Get a named route.
+     *
+     * @param string $name Route name
+     *
+     * @throws \InvalidArgumentException If named route does not exist
+     *
+     * @return \Chiron\Router\Route
+     */
+    public function getNamedRoute(string $name): Route
     {
-        $this->routeCollector = $collector;
+        foreach ($this->getRoutes() as $route) {
+            if ($route->getName() === $name) {
+                return $route;
+            }
+        }
+
+        throw new InvalidArgumentException('Named route does not exist for name: ' . $name);
+    }
+
+    /**
+     * Get route objects.
+     *
+     * @return Route[]
+     */
+    public function getRoutes(): array
+    {
+        return $this->routes;
+    }
+
+    /**
+     * Execute the middleware stack seeded with the RouteHandler as the last handler.
+     *
+     * @param ServerRequestInterface $request
+     *
+     * @return ResponseInterface
+     */
+    public function handle(ServerRequestInterface $request) : ResponseInterface
+    {
+        $handler = new RequestHandler($this->getMiddlewareStack(), new RouteRunner($this));
+
+        return $handler->handle($request);
+    }
+
+    /**
+     * Build the path for a named route including the base path.
+     *
+     * @param string $routeName     Route name
+     * @param array  $substitutions Named argument replacement data
+     * @param array  $queryParams   Optional query string parameters
+     *
+     * @throws InvalidArgumentException If named route does not exist
+     * @throws InvalidArgumentException If required data not provided
+     *
+     * @return string
+     */
+    public function urlFor(string $routeName, array $substitutions = [], array $queryParams = []): string
+    {
+        $url = $this->relativeUrlFor($routeName, $substitutions, $queryParams);
+
+        if ($basePath = $this->getBasePath()) {
+            $url = $basePath . $url;
+        }
+
+        return $url;
+    }
+
+    /**
+     * Build the path for a named route excluding the base path.
+     *
+     * @param string $routeName     Route name
+     * @param array  $substitutions Named argument replacement data
+     * @param array  $queryParams   Optional query string parameters
+     *
+     * @throws InvalidArgumentException If named route does not exist
+     * @throws InvalidArgumentException If required data not provided
+     *
+     * @return string
+     */
+    public function relativeUrlFor(string $routeName, array $substitutions = [], array $queryParams = []): string
+    {
+        $route = $this->getNamedRoute($routeName);
+
+        return FastRouteUrlGenerator::generate($route->getPath(), $substitutions, $queryParams);
     }
 
     public function match(ServerRequestInterface $request): RouteResult
@@ -200,7 +286,7 @@ class FastRoute implements RouterInterface
 
     private function getDispatcher(): DispatcherInterface
     {
-        return new GroupCountBasedDispatcher($this->generator->getData());
+        return new RouteDispatcher($this->generator->getData());
     }
 
     /**
@@ -237,7 +323,7 @@ class FastRoute implements RouterInterface
      */
     private function injectRoutes(ServerRequestInterface $request): void
     {
-        foreach ($this->routeCollector->getRoutes() as $route) {
+        foreach ($this->routes as $route) {
             // check for scheme condition
             if (! is_null($route->getScheme()) && $route->getScheme() !== $request->getUri()->getScheme()) {
                 continue;
@@ -314,52 +400,4 @@ class FastRoute implements RouterInterface
         }
     }
 
-    /**
-     * Build the path for a named route including the base path.
-     *
-     * @param string $routeName     Route name
-     * @param array  $substitutions Named argument replacement data
-     * @param array  $queryParams   Optional query string parameters
-     *
-     * @throws InvalidArgumentException If named route does not exist
-     * @throws InvalidArgumentException If required data not provided
-     *
-     * @return string
-     */
-    public function urlFor(string $routeName, array $substitutions = [], array $queryParams = []): string
-    {
-        $url = $this->relativeUrlFor($routeName, $substitutions, $queryParams);
-
-        if ($basePath = $this->getBasePath()) {
-            $url = $basePath . $url;
-        }
-
-        return $url;
-    }
-
-    /**
-     * Build the path for a named route excluding the base path.
-     *
-     * @param string $routeName     Route name
-     * @param array  $substitutions Named argument replacement data
-     * @param array  $queryParams   Optional query string parameters
-     *
-     * @throws InvalidArgumentException If named route does not exist
-     * @throws InvalidArgumentException If required data not provided
-     *
-     * @return string
-     */
-    public function relativeUrlFor(string $routeName, array $substitutions = [], array $queryParams = []): string
-    {
-        $route = $this->routeCollector->getNamedRoute($routeName);
-
-        return FastRouteUrlGenerator::generate($route->getPath(), $substitutions, $queryParams);
-    }
-
-    public function handle(ServerRequestInterface $request) : ResponseInterface
-    {
-        $handler = new RequestHandler($this->getMiddlewareStack(), new RouteRunner($this));
-
-        return $handler->handle($request);
-    }
 }
