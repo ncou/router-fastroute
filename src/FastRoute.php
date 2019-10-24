@@ -16,7 +16,7 @@ use Chiron\Router\RequestHandler;
 use Chiron\Router\RouteCollectorInterface;
 use Chiron\Router\RouteGroup;
 use Chiron\Router\RouteResult;
-use Chiron\Router\RouteRunner;
+use Chiron\Router\RouteHandler;
 use FastRoute\DataGenerator\GroupCountBased as RouteGenerator;
 use FastRoute\RouteParser\Std as RouteParser;
 use FastRoute\Dispatcher as DispatcherInterface;
@@ -219,7 +219,7 @@ class FastRoute implements RouterInterface
      */
     public function handle(ServerRequestInterface $request) : ResponseInterface
     {
-        $handler = new RequestHandler($this->getMiddlewareStack(), new RouteRunner($this));
+        $handler = new RequestHandler($this->getMiddlewareStack(), new RouteHandler($this));
 
         return $handler->handle($request);
     }

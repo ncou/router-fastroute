@@ -47,6 +47,7 @@
         ],
         "phpunit": "phpunit --colors=always",
         "phpcs": "phpcs src",
+        "phpcs-fix": "phpcbf src",
         "phpstan": "phpstan analyse src --level=0",
         "test-coverage": "phpunit --coverage-clover clover.xml"
     },
