@@ -15,8 +15,8 @@ use Chiron\Router\Method;
 use Chiron\Router\RequestHandler;
 use Chiron\Router\RouteCollectorInterface;
 use Chiron\Router\RouteGroup;
-use Chiron\Router\RouteResult;
-use Chiron\Router\RouteHandler;
+use Chiron\Router\MatchingResult;
+use Chiron\Router\RoutingHandler;
 use FastRoute\DataGenerator\GroupCountBased as RouteGenerator;
 use FastRoute\RouteParser\Std as RouteParser;
 use FastRoute\Dispatcher as DispatcherInterface;
@@ -50,6 +50,7 @@ use RuntimeException;
  * attaching via one of the exposed methods, and will raise an exception when a
  * collision occurs.
  */
+// TODO : classe à renommer en FastRouteRouter
 class FastRoute implements RouterInterface
 {
     use MiddlewareAwareTrait;
@@ -109,7 +110,7 @@ class FastRoute implements RouterInterface
     /**
      * @var string Can be used to ignore leading part of the Request URL (if main file lives in subdirectory of host)
      */
-    private $basePath = '';
+    private $basePath;
 
     /**
      * Constructor.
@@ -119,7 +120,7 @@ class FastRoute implements RouterInterface
      */
     // TODO : créer un constructeur qui prendra en paramétre un routeCollector, ca évitera de faire un appel à setRouteCollector() !!!!
     // TODO : virer le DataGenerator qui est en paramétre et faire un new directement dans le constructeur.
-    public function __construct()
+    public function __construct(string $basePath)
     {
         $this->parser = new RouteParser();
         // build parent route collector
@@ -130,6 +131,8 @@ class FastRoute implements RouterInterface
         array_walk($this->patternMatchers, function ($value, $key) {
             $this->addPatternMatcher($key, $value);
         });*/
+
+        $this->basePath = '/' . ltrim($basePath, '/');
     }
 
     /**
@@ -154,27 +157,30 @@ class FastRoute implements RouterInterface
      * Set the base path.
      * Useful if you are running your application from a subdirectory.
      */
+/*
     public function setBasePath(string $basePath): void
     {
         $this->basePath = rtrim($basePath, '/');
         //$this->basePath = $basePath;
         //$this->basePath = '/' . ltrim($basePath, '/');
-    }
+    }*/
 
     /**
      * Get the router base path.
      * Useful if you are running your application from a subdirectory.
      */
+/*
     public function getBasePath(): string
     {
         return $this->basePath;
-    }
+    }*/
 
     /**
      * Add a route to the collection.
      *
      * @param Route $route
      */
+    // TODO : il faudrait que le addRoute retourne la route ajoutée, cela permettra de chainer les commandes "ex : $router->addRoute($route1)->name('home')"
     public function addRoute(Route $route): void
     {
         $this->routes[] = $route;
@@ -211,7 +217,7 @@ class FastRoute implements RouterInterface
     }
 
     /**
-     * Execute the middleware stack seeded with the RouteHandler as the last handler.
+     * Execute the middleware stack seeded with the RoutingHandler as the last handler.
      *
      * @param ServerRequestInterface $request
      *
@@ -219,7 +225,13 @@ class FastRoute implements RouterInterface
      */
     public function handle(ServerRequestInterface $request) : ResponseInterface
     {
-        $handler = new RequestHandler($this->getMiddlewareStack(), new RouteHandler($this));
+        $handler = new RequestHandler();
+
+        foreach ($this->getMiddlewareStack() as $middleware) {
+            $handler->pipe($middleware);
+        }
+
+        $handler->setFallback(new RoutingHandler($this));
 
         return $handler->handle($request);
     }
@@ -240,9 +252,11 @@ class FastRoute implements RouterInterface
     {
         $url = $this->relativeUrlFor($routeName, $substitutions, $queryParams);
 
-        if ($basePath = $this->getBasePath()) {
-            $url = $basePath . $url;
-        }
+        //if ($basePath = $this->getBasePath()) {
+        //    $url = $basePath . $url;
+        //}
+
+        $url = $this->basePath . $url;
 
         return $url;
     }
@@ -266,7 +280,7 @@ class FastRoute implements RouterInterface
         return FastRouteUrlGenerator::generate($route->getPath(), $substitutions, $queryParams);
     }
 
-    public function match(ServerRequestInterface $request): RouteResult
+    public function match(ServerRequestInterface $request): MatchingResult
     {
         // prepare routes
         $this->injectRoutes($request);
@@ -278,6 +292,8 @@ class FastRoute implements RouterInterface
         $uri = rawurldecode($request->getUri()->getPath()); //$uri = '/' . ltrim($request->getUri()->getPath(), '/');
 
         $result = $dispatcher->dispatch($httpMethod, $uri);
+
+        //die(var_dump($result));
 
         return $result[0] !== DispatcherInterface::FOUND
             ? $this->marshalFailedRoute($result)
@@ -295,24 +311,24 @@ class FastRoute implements RouterInterface
      * If the failure was due to the HTTP method, passes the allowed HTTP
      * methods to the factory.
      */
-    private function marshalFailedRoute(array $result): RouteResult
+    private function marshalFailedRoute(array $result): MatchingResult
     {
         if ($result[0] === DispatcherInterface::METHOD_NOT_ALLOWED) {
-            return RouteResult::fromRouteFailure($result[1]);
+            return MatchingResult::fromRouteFailure($result[1]);
         }
 
-        return RouteResult::fromRouteFailure(RouteResult::HTTP_METHOD_ANY);
+        return MatchingResult::fromRouteFailure(MatchingResult::HTTP_METHOD_ANY);
     }
 
     /**
      * Marshals a route result based on the results of matching and the current HTTP method.
      */
-    private function marshalMatchedRoute(array $result): RouteResult
+    private function marshalMatchedRoute(array $result): MatchingResult
     {
         $route = $result[1];
         $params = $result[2];
 
-        return RouteResult::fromRoute($route, $params);
+        return MatchingResult::fromRoute($route, $params);
     }
 
     /**
@@ -340,6 +356,7 @@ class FastRoute implements RouterInterface
             $routePath = $this->replaceAssertPatterns($route->getRequirements(), $route->getPath());
             $routePath = $this->replaceWordPatterns($routePath);
 
+            //Each added route must inherit basePath prefix
             $this->injectRoute($route, $route->getAllowedMethods(), $this->basePath . $routePath);
         }
     }

@@ -100,11 +100,11 @@ class RouterTest extends TestCase
 
         $router->getRouteCollector()->get($routePath, 'handler')->name('foo');
 
-        $routeResult = $router->match($request);
+        $matchingResult = $router->match($request);
 
-        $this->assertTrue($routeResult->isSuccess());
-        $this->assertSame('foo', $routeResult->getMatchedRouteName());
-        $this->assertSame(['id' => $expectedId], $routeResult->getMatchedParams());
+        $this->assertTrue($matchingResult->isSuccess());
+        $this->assertSame('foo', $matchingResult->getMatchedRouteName());
+        $this->assertSame(['id' => $expectedId], $matchingResult->getMatchedParams());
     }
 
     /**
@@ -190,11 +190,11 @@ class RouterTest extends TestCase
 
         $callback($router->getRouteCollector());
 
-        $routeResult = $router->match($request);
+        $matchingResult = $router->match($request);
 
-        $this->assertFalse($routeResult->isSuccess());
-        $this->assertTrue($routeResult->isFailure());
-        $this->assertTrue($routeResult->isMethodFailure());
+        $this->assertFalse($matchingResult->isSuccess());
+        $this->assertTrue($matchingResult->isFailure());
+        $this->assertTrue($matchingResult->isMethodFailure());
     }
 
     public function provideMethodNotAllowedDispatchCases()
@@ -267,11 +267,11 @@ class RouterTest extends TestCase
 
         $callback($router->getRouteCollector());
 
-        $routeResult = $router->match($request);
+        $matchingResult = $router->match($request);
 
-        $this->assertFalse($routeResult->isSuccess());
-        $this->assertTrue($routeResult->isFailure());
-        $this->assertFalse($routeResult->isMethodFailure());
+        $this->assertFalse($matchingResult->isSuccess());
+        $this->assertTrue($matchingResult->isFailure());
+        $this->assertFalse($matchingResult->isMethodFailure());
     }
 
     public function provideNotFoundDispatchCases()

@@ -24,7 +24,7 @@ class FastRouterTest extends TestCase
 
         $router->getRouteCollector()->get('/foo/{test}/{test:\d+}', 'handler0');
 
-        $routeResult = $router->match($request);
+        $matchingResult = $router->match($request);
     }
 
     /**
@@ -40,7 +40,7 @@ class FastRouterTest extends TestCase
         $router->getRouteCollector()->get('/user/{id}', 'handler0'); // oops, forgot \d+ restriction ;)
         $router->getRouteCollector()->get('/user/{name}', 'handler1');
 
-        $routeResult = $router->match($request);
+        $matchingResult = $router->match($request);
     }
 
     /**
@@ -56,7 +56,7 @@ class FastRouterTest extends TestCase
         $router->getRouteCollector()->get('/user', 'handler0');
         $router->getRouteCollector()->get('/user', 'handler1');
 
-        $routeResult = $router->match($request);
+        $matchingResult = $router->match($request);
     }
 
     /**
@@ -74,7 +74,7 @@ class FastRouterTest extends TestCase
         $router->getRouteCollector()->get('/user/{name}', 'handler0');
         $router->getRouteCollector()->get('/user/nikic', 'handler1');
 
-        $routeResult = $router->match($request);
+        $matchingResult = $router->match($request);
     }
 
     /**
@@ -89,6 +89,6 @@ class FastRouterTest extends TestCase
 
         $router->getRouteCollector()->get('/{lang:(en|de)}', 'handler0');
 
-        $routeResult = $router->match($request);
+        $matchingResult = $router->match($request);
     }
 }
