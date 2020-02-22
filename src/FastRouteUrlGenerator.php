@@ -4,13 +4,16 @@ declare(strict_types=1);
 
 namespace Chiron\Router\FastRoute;
 
+use Chiron\Router\UrlGeneratorInterface;
 use FastRoute\RouteParser\Std;
 use InvalidArgumentException;
 
-//https://github.com/symfony/routing/blob/master/Generator/UrlGenerator.php
+//https://github.com/symfony/routing/blob/master/Generator/UrlGenerator.php#L324
 //https://github.com/illuminate/routing/blob/master/RouteUrlGenerator.php
+//https://github.com/yiisoft/router-fastroute/blob/master/src/FastRoute.php#L227
+//https://github.com/yiisoft/router/blob/master/src/UrlGeneratorInterface.php
 
-class FastRouteUrlGenerator
+class FastRouteUrlGenerator implements UrlGeneratorInterface
 {
     /**
      * Characters that should not be URL encoded.

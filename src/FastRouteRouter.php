@@ -50,11 +50,8 @@ use RuntimeException;
  * attaching via one of the exposed methods, and will raise an exception when a
  * collision occurs.
  */
-// TODO : classe à renommer en FastRouteRouter
-class FastRoute implements RouterInterface
+class FastRouteRouter implements RouterInterface
 {
-    use MiddlewareAwareTrait;
-
     /** @var FastRoute\RouteParser */
     private $parser;
 
@@ -132,7 +129,7 @@ class FastRoute implements RouterInterface
             $this->addPatternMatcher($key, $value);
         });*/
 
-        $this->basePath = '/' . ltrim($basePath, '/');
+        $this->basePath = '/' . ltrim($basePath, '/'); //TODO : utiliser plutot ce bout de code         sprintf('/%s', ltrim($path, '/'));
     }
 
     /**
@@ -214,26 +211,6 @@ class FastRoute implements RouterInterface
     public function getRoutes(): array
     {
         return $this->routes;
-    }
-
-    /**
-     * Execute the middleware stack seeded with the RoutingHandler as the last handler.
-     *
-     * @param ServerRequestInterface $request
-     *
-     * @return ResponseInterface
-     */
-    public function handle(ServerRequestInterface $request) : ResponseInterface
-    {
-        $handler = new RequestHandler();
-
-        foreach ($this->getMiddlewareStack() as $middleware) {
-            $handler->pipe($middleware);
-        }
-
-        $handler->setFallback(new RoutingHandler($this));
-
-        return $handler->handle($request);
     }
 
     /**
