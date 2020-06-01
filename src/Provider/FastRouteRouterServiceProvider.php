@@ -42,6 +42,6 @@ class FastRouteRouterServiceProvider implements ServiceProviderInterface
     public function register(BindingInterface $container): void
     {
         // register router object
-        $container->share(RouterInterface::class, FastRouteRouter::class);
+        $container->singleton(RouterInterface::class, FastRouteRouter::class);
     }
 }
