@@ -4,8 +4,7 @@ declare(strict_types=1);
 
 namespace Chiron\Router\FastRoute;
 
-use Chiron\Router\UrlGeneratorInterface;
-use FastRoute\RouteParser\Std;
+use FastRoute\RouteParser\Std as RouteParser;
 use InvalidArgumentException;
 
 //https://github.com/symfony/routing/blob/master/Generator/UrlGenerator.php#L324
@@ -13,14 +12,17 @@ use InvalidArgumentException;
 //https://github.com/yiisoft/router-fastroute/blob/master/src/FastRoute.php#L227
 //https://github.com/yiisoft/router/blob/master/src/UrlGeneratorInterface.php
 
-class FastRouteUrlGenerator implements UrlGeneratorInterface
+final class UrlGenerator
 {
+    /** @var FastRoute\RouteParser */
+    private $routeParser;
+
     /**
      * Characters that should not be URL encoded.
      *
      * @var array
      */
-    private static $dontEncode = [
+    private $dontEncode = [
         '%2F' => '/',
         '%40' => '@',
         '%3A' => ':',
@@ -36,6 +38,11 @@ class FastRouteUrlGenerator implements UrlGeneratorInterface
         '%23' => '#',
         '%25' => '%',
     ];
+
+    public function __construct(?RouteParser $routeParser = null)
+    {
+        $this->routeParser = $routeParser ?? new RouteParser();
+    }
 
     /**
      * Build the path for a named route excluding the base path.
@@ -55,11 +62,13 @@ class FastRouteUrlGenerator implements UrlGeneratorInterface
     // TODO : améliorer le code avec cette partie là =>   https://github.com/illuminate/routing/blob/master/RouteUrlGenerator.php#L77
     // https://github.com/zendframework/zend-expressive-fastroute/blob/master/src/FastRouteRouter.php#L239
     //https://github.com/illuminate/routing/blob/master/RouteUrlGenerator.php#L77
-    public static function generate(string $routePath, array $substitutions = [], array $queryParams = []): string
+    public function generate(string $routePath, array $substitutions = [], array $queryParams = []): string
     {
         // TODO : attention il faut lui passer la route en paramétre de la fonction generate() car on doit aussi utiliser les paramétres par défaut pour générer l'URI => https://github.com/yiisoft/router-fastroute/blob/master/src/FastRoute.php#L231
-        $parser = new Std();
-        $routeDatas = $parser->parse($routePath);
+
+        // TODO : autre exemple avec les paramétres par défaut => https://github.com/symfony/routing/blob/master/Generator/UrlGenerator.php#L173
+
+        $routeDatas = $this->routeParser->parse($routePath);
 
         // $routeDatas is an array of all possible routes that can be made. There is
         // one routedata for each optional parameter plus one for no optional parameters.
@@ -118,11 +127,11 @@ class FastRouteUrlGenerator implements UrlGeneratorInterface
         if ($queryParams) {
             // TODO : améliorer le code avec ca : https://github.com/illuminate/routing/blob/master/RouteUrlGenerator.php#L255 et ca : https://github.com/illuminate/support/blob/master/Arr.php#L599
             //$url .= '?' . http_build_query($queryParams);
-            $url = self::addQueryString($url, $queryParams);
+            $url = $this->addQueryString($url, $queryParams);
         }
 
         // We will encode the URI and prepare it for returning to the developer.
-        $url = strtr(rawurlencode($url), self::$dontEncode);
+        $url = strtr(rawurlencode($url), $this->dontEncode);
 
         return $url;
     }
@@ -135,7 +144,7 @@ class FastRouteUrlGenerator implements UrlGeneratorInterface
      *
      * @return mixed|string
      */
-    private static function addQueryString(string $url, array $parameters): string
+    private function addQueryString(string $url, array $parameters): string
     {
         // If the URI has a fragment we will move it to the end of this URI since it will
         // need to come after any query string that may be added to the URL else it is
@@ -143,7 +152,7 @@ class FastRouteUrlGenerator implements UrlGeneratorInterface
         if (! is_null($fragment = parse_url($url, PHP_URL_FRAGMENT))) {
             $url = preg_replace('/#.*/', '', $url);
         }
-        $url .= self::getRouteQueryString($parameters);
+        $url .= $this->getRouteQueryString($parameters);
 
         return is_null($fragment) ? $url : $url . "#{$fragment}";
     }
@@ -155,7 +164,7 @@ class FastRouteUrlGenerator implements UrlGeneratorInterface
      *
      * @return string
      */
-    private static function getRouteQueryString(array $parameters): string
+    private function getRouteQueryString(array $parameters): string
     {
         $query = http_build_query($parameters, '', '&', PHP_QUERY_RFC3986);
 

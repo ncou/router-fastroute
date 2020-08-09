@@ -7,7 +7,7 @@ namespace Chiron\Tests\Router\FastRoute;
 use Nyholm\Psr7\ServerRequest;
 use Nyholm\Psr7\Uri;
 use Chiron\Router\Route;
-use Chiron\Router\FastRoute\FastRoute as Router;
+use Chiron\Router\FastRoute\FastRouteRouter as Router;
 use Chiron\Router\RouterInterface;
 use Chiron\Router\RouteCollectorInterface;
 use Chiron\Router\Strategy\StrategyInterface;
